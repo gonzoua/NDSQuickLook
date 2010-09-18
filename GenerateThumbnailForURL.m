@@ -13,12 +13,12 @@ struct banner_t
     unsigned char reserved[28];
     unsigned char tile_data[512];
     uint16_t palette[16];
-    unsigned char jp_title[512];
-    unsigned char en_title[512];
-    unsigned char fr_title[512];
-    unsigned char de_title[512];
-    unsigned char it_title[512];
-    unsigned char es_title[512];
+    unsigned char jp_title[256];
+    unsigned char en_title[256];
+    unsigned char fr_title[256];
+    unsigned char de_title[256];
+    unsigned char it_title[256];
+    unsigned char es_title[256];
 } __attribute__((packed));
 
 /*
@@ -75,23 +75,29 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
     
     if( CFStringGetCString(cfpathref, cpath, sizeof(cpath)-1, kCFStringEncodingUTF8) == FALSE) {
         CFRelease(cfpathref);
+        fprintf(stderr, "Failed to get CString\n");
         return noErr;
     }
     
     CFRelease(cfpathref);
 
     fd = open(cpath, O_RDONLY);
-    if (fd < 0)
+    if (fd < 0) {
+        fprintf(stderr, "Failed to open file\n");
         return noErr;
+    }
     
     pos = lseek(fd, OFFSET_POSITION, SEEK_SET);
 
     if (pos != OFFSET_POSITION) {
+        fprintf(stderr, "Failed to seek to OFFSET_POSITION\n");
         close(fd);
         return noErr;
     }    
     
     if (read(fd, &iconOffset, 4) < 4) {
+        fprintf(stderr, "Failed to read logo/title offset\n");
+
         close(fd);
         return noErr;
     }
@@ -101,11 +107,15 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
     pos = lseek(fd, iconOffset, SEEK_SET);
     
     if (pos != iconOffset) {
+        fprintf(stderr, "Logo/title offset is invalid: %lld\n", pos);
         close(fd);
         return noErr;
     }
-    
-    if (read(fd, &banner, sizeof(banner)) < sizeof(banner)) {
+    unsigned long bytes;
+    if ((bytes = read(fd, &banner, sizeof(banner))) < sizeof(banner)) {
+        fprintf(stderr, "Failed to read %ld bytes for logo/title, only %ld read\n", 
+                sizeof(banner), bytes);
+
         close(fd);
         return noErr;
     }
@@ -117,6 +127,7 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
     sz.width = ICON_HEIGHT*8;
     ctx = QLThumbnailRequestCreateContext(thumbnail, sz, true, NULL);
     if( !ctx ) {
+        fprintf(stderr, "Failed to create CGContext\n");
         return noErr;
     }
 
