@@ -102,6 +102,10 @@ OSStatus GenerateThumbnailForURL(void *thisInterface, QLThumbnailRequestRef thum
         return noErr;
     }
     
+    // is there icon after all?
+    if (!iconOffset)
+        return noErr;
+    
     // TODO: big/little endian swap
 
     pos = lseek(fd, iconOffset, SEEK_SET);
